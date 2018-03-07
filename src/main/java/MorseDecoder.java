@@ -3,9 +3,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidParameterException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Decode Morse code from a WAV file.
@@ -31,7 +29,6 @@ public class MorseDecoder {
      * need to modify this value.
      */
     private static final int BIN_SIZE = 100;
-
     /**
      * Compute power measurements for fixed-size bins of WAV samples.
      * <p>
@@ -44,17 +41,17 @@ public class MorseDecoder {
      */
     private static double[] binWavFilePower(final WavFile inputFile)
             throws IOException, WavFileException {
-
         /*
          * We should check the results of getNumFrames to ensure that they are safe to cast to int.
          */
         int totalBinCount = (int) Math.ceil(inputFile.getNumFrames() / BIN_SIZE);
         double[] returnBuffer = new double[totalBinCount];
-
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
-            // Get the right number of samples from the inputFile
-            // Sum all the samples together and store them in the returnBuffer
+            int a = inputFile.readFrames(sampleBuffer, BIN_SIZE);
+           for (int sampleindex = 0; sampleindex < returnBuffer.length; sampleindex++) {
+               returnBuffer[binIndex] += sampleBuffer[sampleindex];
+           }
         }
         return returnBuffer;
     }
@@ -73,10 +70,10 @@ public class MorseDecoder {
      * <p>
      * Write this function.
      *
-     * @param powerMeasurements the array of power measurements from binWavPower
+     * @param measurements the array of power measurements from binWavPower
      * @return the Morse code string of dots, dashes, and spaces
      */
-    private static String powerToDotDash(final double[] powerMeasurements) {
+    private static String powerToDotDash(final double[] measurements) {
         /*
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
@@ -86,8 +83,24 @@ public class MorseDecoder {
         // else if ispower and not waspower
         // else if issilence and wassilence
         // else if issilence and not wassilence
-
-        return "";
+        int count = 0;
+        String anwser = "";
+        for (int i = 1; i < measurements.length; i++) {
+            if (measurements[i] > POWER_THRESHOLD && measurements[i - 1] > POWER_THRESHOLD) {
+               count++;
+            } else if (measurements[i] > POWER_THRESHOLD && measurements[i - 1] < POWER_THRESHOLD) {
+                count++;
+            } else if (measurements[i] < POWER_THRESHOLD && measurements[i - 1] > POWER_THRESHOLD) {
+               if (count == DASH_BIN_COUNT) {
+                   anwser += "-";
+               } else {
+                   anwser += ".";
+                }
+            } else if (measurements[i] < POWER_THRESHOLD && measurements[i - 1] < POWER_THRESHOLD) {
+                anwser += " ";
+            }
+        }
+        return anwser;
     }
 
     /**
